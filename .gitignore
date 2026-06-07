@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build output
+app/.next/
+app/out/
+
+# SQLite databases (contain user data)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Extracted text files (large, regeneratable)
+data/output_full.txt
+data/english_output.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+dev-server.log
+
+# PDF files (large, not needed in repo)
+*.pdf
+
+# Temp
+*.tmp
+pdf_extract_temp/
