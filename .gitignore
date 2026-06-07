@@ -6,10 +6,12 @@ node_modules/
 app/.next/
 app/out/
 
-# SQLite databases (contain user data)
-*.sqlite
+# SQLite WAL/journal files (auto-generated, never commit)
 *.sqlite-wal
 *.sqlite-shm
+
+# Backup / intermediate DBs in db/ folder (app/matura.sqlite IS tracked)
+db/*.sqlite
 
 # Extracted text files (large, regeneratable)
 data/output_full.txt
