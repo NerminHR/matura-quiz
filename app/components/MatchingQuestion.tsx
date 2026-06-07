@@ -76,7 +76,7 @@ export default function MatchingQuestion({ question: q, userMapping, onChange, r
             {/* Correct answer hint when wrong */}
             {revealed && isWrong && (
               <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded flex-shrink-0">
-                Tačno: {rightChoices[LETTERS.indexOf(correctRight)]?.text ?? correctRight}
+                Tačno: {rightChoices[LETTERS.indexOf(correctRight as typeof LETTERS[number])]?.text ?? correctRight}
               </span>
             )}
           </div>
