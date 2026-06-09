@@ -22,6 +22,13 @@ function getDb(): Database.Database {
       );
       CREATE INDEX IF NOT EXISTS idx_res_user_subj ON test_results(user_name, subject);
     `);
+    // Add extra columns if they don't exist yet (ALTER TABLE ignores errors)
+    for (const col of [
+      "ALTER TABLE test_results ADD COLUMN ip_address TEXT",
+      "ALTER TABLE test_results ADD COLUMN user_agent TEXT",
+    ]) {
+      try { _db.exec(col); } catch { /* column already exists */ }
+    }
   }
   return _db;
 }
@@ -126,6 +133,8 @@ export function saveResultAndGetLeaderboard(params: {
   questionCount: number;
   correctCount: number;
   timeSeconds: number;
+  ipAddress?: string;
+  userAgent?: string;
 }): SaveResultResponse {
   const db = getDb();
 
@@ -140,8 +149,8 @@ export function saveResultAndGetLeaderboard(params: {
 
   const ins = db
     .prepare(
-      `INSERT INTO test_results (user_name, subject, section_filter, question_count, correct_count, time_seconds)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO test_results (user_name, subject, section_filter, question_count, correct_count, time_seconds, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       params.userName,
@@ -149,7 +158,9 @@ export function saveResultAndGetLeaderboard(params: {
       params.sectionFilter ?? null,
       params.questionCount,
       params.correctCount,
-      params.timeSeconds
+      params.timeSeconds,
+      params.ipAddress ?? null,
+      params.userAgent ?? null,
     );
 
   const newId = ins.lastInsertRowid as number;
@@ -215,4 +226,33 @@ function getLeaderboardData(
   }
 
   return { leaderboard, currentResultRank, userStats };
+}
+
+// ─── Admin log access ────────────────────────────────────────────────────────
+
+export type LogEntry = {
+  id: number;
+  user_name: string;
+  subject: string;
+  section_filter: string | null;
+  question_count: number;
+  correct_count: number;
+  pct: number;
+  time_seconds: number;
+  completed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+};
+
+export function getAllLogs(): LogEntry[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT id, user_name, subject, section_filter,
+           question_count, correct_count,
+           ROUND(correct_count * 100 / question_count) AS pct,
+           time_seconds, completed_at, ip_address, user_agent
+    FROM test_results
+    ORDER BY id DESC
+  `).all() as LogEntry[];
+  return rows;
 }

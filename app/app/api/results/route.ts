@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const userAgent = req.headers.get("user-agent") ?? null;
+
   try {
     const result = saveResultAndGetLeaderboard({
       userName: userName.slice(0, 50),
@@ -25,6 +31,8 @@ export async function POST(req: NextRequest) {
       questionCount,
       correctCount,
       timeSeconds: Math.max(0, Math.min(timeSeconds, 7200)),
+      ipAddress: ip,
+      userAgent: userAgent ?? undefined,
     });
     return NextResponse.json(result);
   } catch (err) {
