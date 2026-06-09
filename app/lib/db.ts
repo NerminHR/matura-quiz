@@ -210,10 +210,7 @@ function getLeaderboardData(
   // Rank of the just-saved result in the overall list
   const currentResultRank = all.findIndex((e) => e.id === currentResultId) + 1;
 
-  // Top 20 for leaderboard display; always include current result if outside top 20
-  const top20 = all.slice(0, 20);
-  const currentInTop = top20.some((e) => e.id === currentResultId);
-  const leaderboard = currentInTop ? top20 : [...top20, all[currentResultRank - 1]].filter(Boolean);
+  const leaderboard = all;
 
   // Personal stats aggregated for this user
   const userRows = all.filter((r) => r.user_name === forUser);
