@@ -134,18 +134,11 @@ export default function HomePage() {
     </span>
   );
 
-  const bottomLabel = (
-    <span className="fixed bottom-3 right-4 text-xs font-semibold text-gray-400 tracking-wide z-50 select-none">
-      The Teacher ♥
-    </span>
-  );
-
-  // ── Login screen ─────────────────────────────────────────────────────────
+// ── Login screen ─────────────────────────────────────────────────────────
   if (!userName) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         {cornerLabel}
-        {bottomLabel}
         <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-8">
           <div className="text-center mb-8">
             <div className="text-6xl mb-3">🎓</div>
@@ -190,7 +183,6 @@ export default function HomePage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         {cornerLabel}
-        {bottomLabel}
         <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
           {/* User header */}
           <div className="flex items-center justify-between mb-8">
