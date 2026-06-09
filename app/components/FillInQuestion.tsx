@@ -32,7 +32,7 @@ export default function FillInQuestion({ question: q, value, onChange, revealed 
 
       {revealed && (
         <p className="text-xs text-gray-500 italic">
-          Ovo pitanje se ne boduje automatski — provjerite sami.
+          Ovo pitanje se ne boduje u quizu, ali se boduje na eksternoj maturi!
         </p>
       )}
     </div>
