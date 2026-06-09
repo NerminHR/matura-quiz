@@ -163,7 +163,8 @@ export default function QuizShell({
                   ))}
                 </div>
               )}
-              {parsedCtx.dialogue && (
+              {/* Dialogue skipped for word-bank fill_in — FillInQuestion renders it with dropdown */}
+              {parsedCtx.dialogue && !isWordBankFillIn && (
                 <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
                   {parsedCtx.dialogue}
                 </div>
