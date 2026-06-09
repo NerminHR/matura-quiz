@@ -1,6 +1,14 @@
 "use client";
 
+import React from "react";
 import type { Question, MatchingItem } from "@/types/question";
+
+function renderBold(text: string): React.ReactNode {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i} className="font-bold underline">{part}</strong> : part
+  );
+}
 
 interface Props {
   question: Question;
@@ -46,7 +54,7 @@ export default function MatchingQuestion({ question: q, userMapping, onChange, r
             {/* Left label */}
             <span className="min-w-[140px] text-sm font-medium text-gray-800">
               <span className="font-bold mr-1">{item.key.toUpperCase()})</span>
-              {item.text}
+              {renderBold(item.text)}
             </span>
 
             <span className="text-gray-400">→</span>
