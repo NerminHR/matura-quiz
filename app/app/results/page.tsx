@@ -32,11 +32,12 @@ export default function ResultsPage() {
   const savedRef = useRef(false);
 
   const [result,        setResult]        = useState<StoredResult | null>(null);
-  const [isPersonalBest, setIsPersonalBest] = useState(false);
-  const [leaderboard,   setLeaderboard]   = useState<LeaderboardEntry[]>([]);
-  const [userStats,     setUserStats]     = useState<UserStats | null>(null);
-  const [userRank,      setUserRank]      = useState(0);
-  const [saving,        setSaving]        = useState(true);
+  const [isPersonalBest,     setIsPersonalBest]     = useState(false);
+  const [leaderboard,        setLeaderboard]        = useState<LeaderboardEntry[]>([]);
+  const [userStats,          setUserStats]          = useState<UserStats | null>(null);
+  const [currentResultRank,  setCurrentResultRank]  = useState(0);
+  const [currentResultId,    setCurrentResultId]    = useState(0);
+  const [saving,             setSaving]             = useState(true);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("quizResult");
@@ -70,7 +71,8 @@ export default function ResultsPage() {
         setIsPersonalBest(data.isPersonalBest ?? false);
         setLeaderboard(data.leaderboard ?? []);
         setUserStats(data.userStats ?? null);
-        setUserRank(data.userRank ?? 0);
+        setCurrentResultRank(data.currentResultRank ?? 0);
+        setCurrentResultId(data.id ?? 0);
         setSaving(false);
       })
       .catch(() => setSaving(false));
@@ -113,10 +115,10 @@ export default function ResultsPage() {
     pct >= 55 ? "👍" :
     pct >= 40 ? "📚" : "💪";
 
-  // Percentile rank among leaderboard players
-  const totalPlayers = leaderboard.length;
-  const playersBeaten = totalPlayers > 0 && userRank > 0
-    ? Math.round(((totalPlayers - userRank) / totalPlayers) * 100)
+  // Percentile based on individual result rank in the full leaderboard
+  const totalResults = leaderboard.length;
+  const playersBeaten = totalResults > 0 && currentResultRank > 0
+    ? Math.round(((totalResults - currentResultRank) / totalResults) * 100)
     : null;
 
   return (
@@ -171,13 +173,13 @@ export default function ResultsPage() {
                 <div className="text-xs text-gray-500 mt-0.5">Testova</div>
               </div>
             </div>
-            {userRank > 0 && totalPlayers > 0 && (
+            {currentResultRank > 0 && totalResults > 0 && (
               <p className="text-center text-sm text-gray-500 mt-3">
-                {userRank === 1
-                  ? "🏆 Ti si na prvom mjestu! You're #1!"
+                {currentResultRank === 1
+                  ? "🏆 Ovaj test je #1 na rang listi!"
                   : playersBeaten !== null && playersBeaten > 0
-                  ? `Ti si #${userRank} — bolji/a si od ${playersBeaten}% igrača`
-                  : `Rang: #${userRank} od ${totalPlayers} igrača`}
+                  ? `Ovaj test je #${currentResultRank} — bolji od ${playersBeaten}% rezultata`
+                  : `Rang ovog testa: #${currentResultRank}`}
               </p>
             )}
           </div>
@@ -191,71 +193,53 @@ export default function ResultsPage() {
             </h2>
 
             <div className="space-y-1.5">
-              {/* Show top entries + always show current user if outside top list */}
-              {(() => {
-                const topN = 10;
-                const top  = leaderboard.slice(0, topN);
-                const userInTop = top.some((e) => e.user_name === userName);
-                const userEntry = !userInTop && userName
-                  ? leaderboard.find((e) => e.user_name === userName)
-                  : null;
-
+              {leaderboard.map((entry, i) => {
+                const isCurrentResult = entry.id === currentResultId;
+                const isMyResult = entry.user_name === userName;
+                const rank = i + 1;
+                const dt = entry.completed_at
+                  ? (() => {
+                      const d = new Date(entry.completed_at.replace(" ", "T") + "Z");
+                      return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+                    })()
+                  : "";
                 return (
-                  <>
-                    {top.map((entry, i) => {
-                      const isMe = entry.user_name === userName;
-                      return (
-                        <div
-                          key={entry.user_name}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
-                            isMe
-                              ? "bg-yellow-50 border-2 border-yellow-300 font-semibold"
-                              : "bg-gray-50"
-                          }`}
-                        >
-                          <span className="w-6 text-center font-bold text-gray-400">
-                            {i < 3 ? RANK_MEDAL[i] : `#${i + 1}`}
-                          </span>
-                          <span className={`flex-1 truncate ${isMe ? "text-yellow-800" : "text-gray-700"}`}>
-                            {entry.user_name}{isMe ? " (Ti)" : ""}
-                          </span>
-                          <span className={`font-black w-12 text-right ${
-                            entry.best_pct >= 90 ? "text-yellow-500" :
-                            entry.best_pct >= 75 ? "text-green-600" :
-                            entry.best_pct >= 55 ? "text-blue-600" : "text-gray-500"
-                          }`}>
-                            {entry.best_pct}%
-                          </span>
-                          <span className="text-gray-400 font-mono text-xs w-10 text-right">
-                            {fmt(entry.best_time)}
-                          </span>
-                          <span className="text-gray-300 text-xs w-8 text-right">
-                            ×{entry.games_played}
-                          </span>
-                        </div>
-                      );
-                    })}
-
-                    {/* Current user outside top 10 */}
-                    {userEntry && (
-                      <>
-                        <div className="text-center text-xs text-gray-300 py-1">· · ·</div>
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm bg-yellow-50 border-2 border-yellow-300 font-semibold">
-                          <span className="w-6 text-center font-bold text-gray-400">#{userRank}</span>
-                          <span className="flex-1 truncate text-yellow-800">{userEntry.user_name} (Ti)</span>
-                          <span className="font-black w-12 text-right text-gray-500">{userEntry.best_pct}%</span>
-                          <span className="text-gray-400 font-mono text-xs w-10 text-right">{fmt(userEntry.best_time)}</span>
-                          <span className="text-gray-300 text-xs w-8 text-right">×{userEntry.games_played}</span>
-                        </div>
-                      </>
-                    )}
-                  </>
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+                      isCurrentResult
+                        ? "bg-yellow-50 border-2 border-yellow-300 font-semibold"
+                        : isMyResult
+                        ? "bg-blue-50 border border-blue-200"
+                        : "bg-gray-50"
+                    }`}
+                  >
+                    <span className="w-6 text-center font-bold text-gray-400 shrink-0">
+                      {rank <= 3 ? RANK_MEDAL[rank - 1] : `#${rank}`}
+                    </span>
+                    <span className={`flex-1 truncate min-w-0 ${isCurrentResult ? "text-yellow-800" : isMyResult ? "text-blue-800" : "text-gray-700"}`}>
+                      {entry.user_name}{isCurrentResult ? " ★" : ""}
+                    </span>
+                    <span className={`font-black w-10 text-right shrink-0 ${
+                      entry.pct >= 90 ? "text-yellow-500" :
+                      entry.pct >= 75 ? "text-green-600" :
+                      entry.pct >= 55 ? "text-blue-600" : "text-gray-500"
+                    }`}>
+                      {entry.pct}%
+                    </span>
+                    <span className="text-gray-400 font-mono text-xs w-10 text-right shrink-0">
+                      {fmt(entry.time_seconds)}
+                    </span>
+                    <span className="text-gray-400 text-xs w-20 text-right shrink-0 hidden sm:block">
+                      {dt}
+                    </span>
+                  </div>
                 );
-              })()}
+              })}
             </div>
 
             <p className="text-xs text-gray-400 text-center mt-3">
-              Rang po najboljoj tačnosti · Ranked by best accuracy
+              Svaki test · Sorted by accuracy — ★ = ovaj test
             </p>
           </div>
         )}

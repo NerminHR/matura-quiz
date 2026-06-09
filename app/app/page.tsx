@@ -255,7 +255,7 @@ export default function HomePage() {
             {cfg!.countLabel}
           </label>
           <div className="flex gap-2">
-            {[10, 20, 30].map((n) => (
+            {[10, 20, 30, 200].map((n) => (
               <button
                 key={n}
                 onClick={() => setQuestionCount(n)}

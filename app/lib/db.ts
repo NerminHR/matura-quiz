@@ -92,13 +92,15 @@ export function getSections(subject = "bs"): string[] {
 
 // ─── Results & Leaderboard ───────────────────────────────────────────────────
 
+// Each row = one individual test result
 export type LeaderboardEntry = {
+  id: number;
   user_name: string;
-  best_pct: number;
-  best_correct: number;
-  best_total: number;
-  best_time: number;
-  games_played: number;
+  pct: number;
+  correct_count: number;
+  question_count: number;
+  time_seconds: number;
+  completed_at: string; // "YYYY-MM-DD HH:MM:SS" UTC
 };
 
 export type UserStats = {
@@ -113,7 +115,7 @@ export type SaveResultResponse = {
   isPersonalBest: boolean;
   previousBestPct: number;
   leaderboard: LeaderboardEntry[];
-  userRank: number;
+  currentResultRank: number;
   userStats: UserStats | null;
 };
 
@@ -129,7 +131,7 @@ export function saveResultAndGetLeaderboard(params: {
 
   const prevRow = db
     .prepare(
-      "SELECT MAX(correct_count * 100 / question_count) as best FROM test_results WHERE user_name = ? AND subject = ?"
+      "SELECT MAX(ROUND(correct_count * 100 / question_count)) as best FROM test_results WHERE user_name = ? AND subject = ?"
     )
     .get(params.userName, params.subject) as { best: number | null };
 
@@ -150,75 +152,67 @@ export function saveResultAndGetLeaderboard(params: {
       params.timeSeconds
     );
 
-  const { leaderboard, userRank, userStats } = getLeaderboardData(params.subject, params.userName);
+  const newId = ins.lastInsertRowid as number;
+  const { leaderboard, currentResultRank, userStats } = getLeaderboardData(params.subject, params.userName, newId);
 
   return {
-    id: ins.lastInsertRowid as number,
+    id: newId,
     isPersonalBest: currentPct > previousBestPct,
     previousBestPct,
     leaderboard,
-    userRank,
+    currentResultRank,
     userStats,
   };
 }
 
+type RawRow = { id: number; user_name: string; correct_count: number; question_count: number; time_seconds: number; completed_at: string };
+
 function getLeaderboardData(
   subject: string,
-  forUser: string
-): { leaderboard: LeaderboardEntry[]; userRank: number; userStats: UserStats | null } {
+  forUser: string,
+  currentResultId: number,
+): { leaderboard: LeaderboardEntry[]; currentResultRank: number; userStats: UserStats | null } {
   const db = getDb();
 
+  // All individual results for this subject, sorted best first
   const rows = db
     .prepare(
-      "SELECT user_name, correct_count, question_count, time_seconds FROM test_results WHERE subject = ?"
+      `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at
+       FROM test_results
+       WHERE subject = ?
+       ORDER BY ROUND(correct_count * 100 / question_count) DESC, time_seconds ASC, id DESC`
     )
-    .all(subject) as { user_name: string; correct_count: number; question_count: number; time_seconds: number }[];
+    .all(subject) as RawRow[];
 
-  const userMap = new Map<string, LeaderboardEntry>();
-  for (const row of rows) {
-    const pct = Math.round((row.correct_count * 100) / row.question_count);
-    const e = userMap.get(row.user_name);
-    if (!e) {
-      userMap.set(row.user_name, {
-        user_name: row.user_name,
-        best_pct: pct,
-        best_correct: row.correct_count,
-        best_total: row.question_count,
-        best_time: row.time_seconds,
-        games_played: 1,
-      });
-    } else {
-      e.games_played++;
-      if (pct > e.best_pct || (pct === e.best_pct && row.time_seconds < e.best_time)) {
-        e.best_pct = pct;
-        e.best_correct = row.correct_count;
-        e.best_total = row.question_count;
-        e.best_time = row.time_seconds;
-      }
-    }
-  }
+  const toEntry = (r: RawRow): LeaderboardEntry => ({
+    id: r.id,
+    user_name: r.user_name,
+    pct: Math.round((r.correct_count * 100) / r.question_count),
+    correct_count: r.correct_count,
+    question_count: r.question_count,
+    time_seconds: r.time_seconds,
+    completed_at: r.completed_at,
+  });
 
-  const sorted = [...userMap.values()].sort(
-    (a, b) => b.best_pct - a.best_pct || a.best_time - b.best_time
-  );
+  const all = rows.map(toEntry);
 
-  const userRank = sorted.findIndex((e) => e.user_name === forUser) + 1;
-  const userEntry = userMap.get(forUser);
-  const allForUser = rows.filter((r) => r.user_name === forUser);
+  // Rank of the just-saved result in the overall list
+  const currentResultRank = all.findIndex((e) => e.id === currentResultId) + 1;
 
+  // Top 20 for leaderboard display; always include current result if outside top 20
+  const top20 = all.slice(0, 20);
+  const currentInTop = top20.some((e) => e.id === currentResultId);
+  const leaderboard = currentInTop ? top20 : [...top20, all[currentResultRank - 1]].filter(Boolean);
+
+  // Personal stats aggregated for this user
+  const userRows = all.filter((r) => r.user_name === forUser);
   let userStats: UserStats | null = null;
-  if (userEntry && allForUser.length > 0) {
-    const avgPct = Math.round(
-      allForUser.reduce((s, r) => s + Math.round((r.correct_count * 100) / r.question_count), 0) /
-        allForUser.length
-    );
-    userStats = {
-      totalGames: userEntry.games_played,
-      bestPct: userEntry.best_pct,
-      avgPct,
-      bestTime: userEntry.best_time,
-    };
+  if (userRows.length > 0) {
+    const bestPct = Math.max(...userRows.map((r) => r.pct));
+    const bestTime = Math.min(...userRows.filter((r) => r.pct === bestPct).map((r) => r.time_seconds));
+    const avgPct = Math.round(userRows.reduce((s, r) => s + r.pct, 0) / userRows.length);
+    userStats = { totalGames: userRows.length, bestPct, avgPct, bestTime };
   }
 
-  return { leaderboard: sorted.slice(0, 20), userRank, userStats };
+  return { leaderboard, currentResultRank, userStats };
 }
