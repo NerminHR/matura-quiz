@@ -1,6 +1,23 @@
 "use client";
 
+import React from "react";
 import type { Question } from "@/types/question";
+
+// Render text with **bold** markers as <strong> elements (preserves newlines)
+function renderBold(text: string): React.ReactNode {
+  return text.split("\n").map((line, li) => (
+    <React.Fragment key={li}>
+      {li > 0 && <br />}
+      {line.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="font-bold underline">{part}</strong>
+        ) : (
+          part
+        )
+      )}
+    </React.Fragment>
+  ));
+}
 
 interface ParsedContext {
   instruction: string | null;
@@ -155,7 +172,7 @@ export default function QuizShell({
             );
           })()}
           <p className="text-gray-900 font-medium leading-relaxed mb-5 whitespace-pre-line">
-            {question.question_text}
+            {renderBold(question.question_text)}
           </p>
           {children}
           {!revealed && (question.question_type === "fill_in" || question.question_type === "matching") && (
