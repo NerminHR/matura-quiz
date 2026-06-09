@@ -178,8 +178,8 @@ export default function QuizShell({
               )}
             </div>
           )}
-          {/* Skip question_text for word-bank fill_in — FillInQuestion renders it with dropdown */}
-          {!isWordBankFillIn && (
+          {/* Skip question_text for word-bank and grammar MCQ fill_in — FillInQuestion renders it with dropdown */}
+          {!isWordBankFillIn && !isGrammarMCQFillIn && (
             <p className="text-gray-900 font-medium leading-relaxed mb-5 whitespace-pre-line">
               {renderBold(question.question_text)}
             </p>
