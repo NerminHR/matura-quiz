@@ -134,6 +134,19 @@ function renderDialogue(
 export default function FillInQuestion({ question: q, value, onChange, revealed }: Props) {
   const { wordBank, dialogue } = parseCtx(q.context_text);
 
+  // Grammar conjugation MCQ: fill_in with no context but with option_a/b/c/d set
+  if (!wordBank && !q.context_text && q.option_a) {
+    const options = [q.option_a!, q.option_b!, q.option_c!, q.option_d!].filter(Boolean);
+    const correctWord = norm(q.correct_answer);
+    return (
+      <div>
+        <p className="text-gray-900 font-medium leading-relaxed">
+          {renderLine(q.question_text, options, 1, value, onChange, revealed, correctWord, 0)}
+        </p>
+      </div>
+    );
+  }
+
   if (wordBank) {
     const correctWord    = getCorrectWord(q.correct_answer, q.question_number);
     const activeBlankNum = getActiveBlankNum(q.question_text, q.question_number);

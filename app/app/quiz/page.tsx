@@ -98,6 +98,10 @@ function QuizContent() {
       return Object.entries(q.correct_mapping).every(([k, v]) => (value as Record<string,string>)[k] === v);
     }
     if (q.question_type === "fill_in" && typeof value === "string" && value !== "") {
+      // Grammar conjugation MCQ: option_a set, no context_text → auto-grade by text match
+      if (!q.context_text && q.option_a) {
+        return value.trim().replace(/\s+/g, " ") === q.correct_answer.trim().replace(/\s+/g, " ");
+      }
       const wb = parseWordBankFromCtx(q.context_text);
       if (wb) {
         const correct = getWBCorrectWord(q.correct_answer, q.question_number);
@@ -206,7 +210,16 @@ function QuizContent() {
         <FillInQuestion
           question={currentQuestion}
           value={typeof userAnswer?.answer === "string" ? userAnswer.answer : ""}
-          onChange={(text) => recordAnswer(currentQuestion, text)}
+          onChange={(text) => {
+            recordAnswer(currentQuestion, text);
+            // Auto-reveal for word-bank and grammar MCQ dropdowns (not free-text)
+            const isAutoReveal =
+              (currentQuestion.context_text && parseWordBankFromCtx(currentQuestion.context_text)) ||
+              (!currentQuestion.context_text && currentQuestion.option_a);
+            if (isAutoReveal && text !== "") {
+              setRevealed((prev) => new Set([...prev, currentQuestion.id]));
+            }
+          }}
           revealed={isRevealed}
         />
       )}

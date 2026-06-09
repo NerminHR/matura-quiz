@@ -117,6 +117,8 @@ export default function QuizShell({
 
   // Word-bank fill_in: FillInQuestion renders question_text with inline dropdown
   const isWordBankFillIn = question.question_type === "fill_in" && parsedCtx.wordBox !== null;
+  // Grammar conjugation fill_in: has option_a/b/c/d, auto-graded like MCQ, no Provjeri button
+  const isGrammarMCQFillIn = question.question_type === "fill_in" && !question.context_text && !!question.option_a;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6 px-4">
@@ -183,7 +185,7 @@ export default function QuizShell({
             </p>
           )}
           {children}
-          {!revealed && (question.question_type === "fill_in" || question.question_type === "matching") && (
+          {!revealed && !isGrammarMCQFillIn && (question.question_type === "fill_in" || question.question_type === "matching") && (
             <button
               onClick={onReveal}
               className="mt-4 w-full py-2 px-4 text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold rounded-lg transition-colors"
