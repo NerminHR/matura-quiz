@@ -222,7 +222,7 @@ export default function HomePage() {
           {/* Note and PDF links */}
           <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900">
             <p className="mb-3 leading-relaxed">
-              <span className="font-semibold">Napomena:</span> ovo su samo testovi za provjeru znanja iz Bosanskog i Engleskog jezika iz eksterne mature. Za pripremu koristite zvanične Ispitne kataloge koji se nalaze u linkovima ispod.
+              <span className="font-semibold">Napomena:</span> Ovo su samo testovi za provjeru znanja iz bosanskog i engleskog jezika za eksternu maturu. Za pripremu koristite zvanične ispitne kataloge koji se nalaze na linkovima ispod.
             </p>
             <div className="flex flex-col gap-2">
               <a
