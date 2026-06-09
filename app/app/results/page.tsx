@@ -16,6 +16,24 @@ interface StoredResult {
 
 const LETTERS = ["a", "b", "c", "d"] as const;
 
+// Mirrors the logic in FillInQuestion / computeCorrect:
+// - MCQ and matching are always auto-graded
+// - fill_in is auto-graded if it has option_a (grammar conjugation) OR a word-bank in context_text
+function isAutoGradable(q: Question): boolean {
+  if (q.question_type === "mcq" || q.question_type === "matching") return true;
+  if (q.question_type === "fill_in") {
+    if (!q.context_text && q.option_a) return true; // grammar MCQ dropdown
+    if (q.context_text) {
+      // Word-bank: at least one line is short, multi-space-separated, not a dialogue speaker line
+      const lines = q.context_text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      const isWBLine = (l: string) =>
+        /\s{2,}/.test(l) && !/^[A-Z][\w\s]*:/.test(l) && l.length <= 50;
+      if (lines.some(isWBLine)) return true;
+    }
+  }
+  return false;
+}
+
 function fmt(s: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -48,7 +66,7 @@ export default function ResultsPage() {
     if (savedRef.current) return;
     savedRef.current = true;
 
-    const gradable = parsed.questions.filter((q) => q.question_type !== "fill_in");
+    const gradable = parsed.questions.filter(isAutoGradable);
     const correct  = gradable.filter((q) => {
       const ua = parsed.userAnswers.find((a) => a.questionId === q.id);
       return ua?.isCorrect === true;
@@ -148,7 +166,7 @@ export default function ResultsPage() {
 
           {questions.length - gradable.length > 0 && (
             <p className="text-xs text-gray-400 mt-2">
-              + {questions.length - gradable.length} pitanje(a) tipa dopuni-rečenicu (samo prikaz)
+              + {questions.length - gradable.length} pitanje(a) slobodnog odgovora (nije bodovano automatski)
             </p>
           )}
         </div>
