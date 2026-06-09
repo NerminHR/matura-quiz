@@ -65,6 +65,30 @@ function QuizContent() {
 
   const currentQuestion = questions[currentIndex];
 
+  function parseWordBankFromCtx(ctx: string | null): string[] | null {
+    if (!ctx) return null;
+    const lines = ctx.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    const isWBLine = (line: string) =>
+      /\s{2,}/.test(line) && !/^[A-Z][\w\s]*:/.test(line) && line.length <= 50;
+    const toWords = (line: string) =>
+      line.split(/\s{2,}/).map(w => w.trim().replace(/\s+/g, " ")).filter(Boolean);
+    if (lines.length > 0 && isWBLine(lines[0])) return toWords(lines[0]);
+    if (lines.length > 1 && isWBLine(lines[1])) return toWords(lines[1]);
+    return null;
+  }
+
+  function getWBCorrectWord(correctAnswer: string, questionNumber: number): string {
+    const n = (s: string) => s.trim().replace(/\s+/g, " ");
+    if (correctAnswer.includes("|") && correctAnswer.includes(":")) {
+      const activeBlank = questionNumber % 10 || 1;
+      for (const part of correctAnswer.split("|")) {
+        const m = part.trim().match(/^(\d+):\s*(.+)$/);
+        if (m && parseInt(m[1]) === activeBlank) return n(m[2]);
+      }
+    }
+    return n(correctAnswer);
+  }
+
   function computeCorrect(q: Question, value: string | Record<string, string>): boolean | null {
     if (q.question_type === "mcq") {
       return typeof value === "string" && value === q.correct_answer;
@@ -72,6 +96,13 @@ function QuizContent() {
     if (q.question_type === "matching" && q.correct_mapping) {
       if (typeof value !== "object") return false;
       return Object.entries(q.correct_mapping).every(([k, v]) => (value as Record<string,string>)[k] === v);
+    }
+    if (q.question_type === "fill_in" && typeof value === "string" && value !== "") {
+      const wb = parseWordBankFromCtx(q.context_text);
+      if (wb) {
+        const correct = getWBCorrectWord(q.correct_answer, q.question_number);
+        return value.trim().replace(/\s+/g, " ") === correct;
+      }
     }
     return null;
   }

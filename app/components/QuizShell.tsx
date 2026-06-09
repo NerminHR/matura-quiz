@@ -111,6 +111,13 @@ export default function QuizShell({
   const progress = ((currentIndex + 1) / total) * 100;
   const isLast   = currentIndex === total - 1;
 
+  const parsedCtx: ParsedContext = question.context_text
+    ? parseContext(question.context_text)
+    : { instruction: null, wordBox: null, dialogue: null };
+
+  // Word-bank fill_in: FillInQuestion renders question_text with inline dropdown
+  const isWordBankFillIn = question.question_type === "fill_in" && parsedCtx.wordBox !== null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6 px-4">
       <div className="max-w-2xl mx-auto">
@@ -139,41 +146,41 @@ export default function QuizShell({
 
         {/* Question card */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
-          {question.context_text && (() => {
-            const { instruction, wordBox, dialogue } = parseContext(question.context_text!);
-            return (
-              <div className="mb-5 space-y-2">
-                {instruction && (
-                  <p className="text-sm font-semibold text-gray-700">{instruction}</p>
-                )}
-                {wordBox && (
-                  <div className="flex flex-wrap gap-2 border-2 border-gray-300 rounded-xl p-3 bg-white">
-                    {wordBox.map((w, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1 bg-gray-100 border border-gray-400 rounded-lg text-sm font-semibold text-gray-800"
-                      >
-                        {w}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {dialogue && (
-                  <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
-                    {dialogue}
-                  </div>
-                )}
-                {!wordBox && !dialogue && (
-                  <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
-                    {question.context_text}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-          <p className="text-gray-900 font-medium leading-relaxed mb-5 whitespace-pre-line">
-            {renderBold(question.question_text)}
-          </p>
+          {question.context_text && (
+            <div className="mb-5 space-y-2">
+              {parsedCtx.instruction && (
+                <p className="text-sm font-semibold text-gray-700">{parsedCtx.instruction}</p>
+              )}
+              {parsedCtx.wordBox && (
+                <div className="flex flex-wrap gap-2 border-2 border-gray-300 rounded-xl p-3 bg-white">
+                  {parsedCtx.wordBox.map((w, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-gray-100 border border-gray-400 rounded-lg text-sm font-semibold text-gray-800"
+                    >
+                      {w}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {parsedCtx.dialogue && (
+                <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
+                  {parsedCtx.dialogue}
+                </div>
+              )}
+              {!parsedCtx.wordBox && !parsedCtx.dialogue && (
+                <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
+                  {question.context_text}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Skip question_text for word-bank fill_in — FillInQuestion renders it with dropdown */}
+          {!isWordBankFillIn && (
+            <p className="text-gray-900 font-medium leading-relaxed mb-5 whitespace-pre-line">
+              {renderBold(question.question_text)}
+            </p>
+          )}
           {children}
           {!revealed && (question.question_type === "fill_in" || question.question_type === "matching") && (
             <button
