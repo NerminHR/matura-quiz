@@ -128,10 +128,17 @@ export default function HomePage() {
   const accentBorder2 = isEn ? "border-emerald-300"   : "border-indigo-300";
   const accentAccent  = isEn ? "accent-emerald-600"   : "accent-indigo-600";
 
+  const cornerLabel = (
+    <span className="fixed top-3 right-4 text-xs font-semibold text-gray-400 tracking-wide z-50 select-none">
+      MMB IX<span className="text-[10px]">1</span>
+    </span>
+  );
+
   // ── Login screen ─────────────────────────────────────────────────────────
   if (!userName) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        {cornerLabel}
         <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-8">
           <div className="text-center mb-8">
             <div className="text-6xl mb-3">🎓</div>
@@ -175,6 +182,7 @@ export default function HomePage() {
   if (!subject) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        {cornerLabel}
         <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
           {/* User header */}
           <div className="flex items-center justify-between mb-8">
@@ -251,6 +259,7 @@ export default function HomePage() {
   // ── Quiz config ───────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {cornerLabel}
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-8">
         {/* Header with back + user */}
         <div className="flex items-center gap-3 mb-6">
