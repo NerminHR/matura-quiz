@@ -2,6 +2,49 @@
 
 import type { Question } from "@/types/question";
 
+interface ParsedContext {
+  instruction: string | null;
+  wordBox: string[] | null;
+  dialogue: string | null;
+}
+
+function parseContext(ctx: string): ParsedContext {
+  const lines = ctx.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+
+  const isWordBoxLine = (line: string) => {
+    const isDialogue = /^[A-Z][\w\s]*:/.test(line);
+    const hasMultiSpace = /\s{2,}/.test(line);
+    const isLongInstruction = line.length > 50;
+    return hasMultiSpace && !isDialogue && !isLongInstruction;
+  };
+
+  const parseWords = (line: string) =>
+    line.split(/\s{2,}/).map((w) => w.trim()).filter((w) => w.length > 0);
+
+  if (lines.length === 0) return { instruction: null, wordBox: null, dialogue: null };
+
+  // Pattern A: word box on line 0 (no instruction in data)
+  if (isWordBoxLine(lines[0])) {
+    return {
+      instruction: "Complete the dialogue using the words from the box.",
+      wordBox: parseWords(lines[0]),
+      dialogue: lines.slice(1).join("\n") || null,
+    };
+  }
+
+  // Pattern B: instruction on line 0, word box on line 1
+  if (lines.length > 1 && isWordBoxLine(lines[1])) {
+    return {
+      instruction: lines[0],
+      wordBox: parseWords(lines[1]),
+      dialogue: lines.slice(2).join("\n") || null,
+    };
+  }
+
+  // No word box detected — render as plain context
+  return { instruction: null, wordBox: null, dialogue: lines.join("\n") };
+}
+
 interface Props {
   currentIndex: number;
   total: number;
@@ -79,11 +122,38 @@ export default function QuizShell({
 
         {/* Question card */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
-          {question.context_text && (
-            <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg mb-5 text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
-              {question.context_text}
-            </div>
-          )}
+          {question.context_text && (() => {
+            const { instruction, wordBox, dialogue } = parseContext(question.context_text!);
+            return (
+              <div className="mb-5 space-y-2">
+                {instruction && (
+                  <p className="text-sm font-semibold text-gray-700">{instruction}</p>
+                )}
+                {wordBox && (
+                  <div className="flex flex-wrap gap-2 border-2 border-gray-300 rounded-xl p-3 bg-white">
+                    {wordBox.map((w, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1 bg-gray-100 border border-gray-400 rounded-lg text-sm font-semibold text-gray-800"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {dialogue && (
+                  <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
+                    {dialogue}
+                  </div>
+                )}
+                {!wordBox && !dialogue && (
+                  <div className="border-l-4 border-indigo-200 bg-indigo-50 p-4 rounded-r-lg text-sm text-gray-700 italic leading-relaxed whitespace-pre-line">
+                    {question.context_text}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <p className="text-gray-900 font-medium leading-relaxed mb-5 whitespace-pre-line">
             {question.question_text}
           </p>
