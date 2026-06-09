@@ -218,6 +218,31 @@ export default function HomePage() {
               </div>
             </button>
           </div>
+
+          {/* Note and PDF links */}
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900">
+            <p className="mb-3 leading-relaxed">
+              <span className="font-semibold">Napomena:</span> ovo su samo testovi za provjeru znanja iz Bosanskog i Engleskog jezika iz eksterne mature. Za pripremu koristite zvanične Ispitne kataloge koji se nalaze u linkovima ispod.
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="/bjk_hjk_sjk_katalog_eksterna_matura_2022_2023.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-indigo-700 hover:text-indigo-900 font-medium underline underline-offset-2"
+              >
+                📄 Ispitni katalog — Bosanski / Hrvatski / Srpski jezik
+              </a>
+              <a
+                href="/engleski_jezik_-ispitni_katalog_pitanja.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-emerald-700 hover:text-emerald-900 font-medium underline underline-offset-2"
+              >
+                📄 Ispitni katalog — Engleski jezik
+              </a>
+            </div>
+          </div>
         </div>
       </main>
     );

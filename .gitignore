@@ -30,8 +30,9 @@ Thumbs.db
 *.log
 dev-server.log
 
-# PDF files (large, not needed in repo)
+# PDF files (large, not needed in repo — except public/ catalog PDFs)
 *.pdf
+!app/public/*.pdf
 
 # Temp
 *.tmp
