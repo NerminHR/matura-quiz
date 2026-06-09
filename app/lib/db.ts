@@ -2,14 +2,31 @@ import Database from "better-sqlite3";
 import path from "path";
 import type { Question } from "@/types/question";
 
-let _db: Database.Database | null = null;
+// ─── Questions DB (matura.sqlite) — tracked in git, read-only at runtime ─────
+let _questionsDb: Database.Database | null = null;
 
 function getDb(): Database.Database {
-  if (!_db) {
+  if (!_questionsDb) {
     const dbPath = path.join(process.cwd(), "matura.sqlite");
-    _db = new Database(dbPath);
-    _db.pragma("journal_mode = WAL");
-    _db.exec(`
+    _questionsDb = new Database(dbPath);
+    _questionsDb.pragma("journal_mode = WAL");
+  }
+  return _questionsDb;
+}
+
+// ─── Results DB (results.sqlite) — NOT in git, persisted on Railway volume ───
+// Set RESULTS_DB_PATH env var on Railway to a volume path, e.g. /data/results.sqlite
+// Locally it defaults to results.sqlite next to matura.sqlite
+let _resultsDb: Database.Database | null = null;
+
+function getResultsDb(): Database.Database {
+  if (!_resultsDb) {
+    const dbPath =
+      process.env.RESULTS_DB_PATH ??
+      path.join(process.cwd(), "results.sqlite");
+    _resultsDb = new Database(dbPath);
+    _resultsDb.pragma("journal_mode = WAL");
+    _resultsDb.exec(`
       CREATE TABLE IF NOT EXISTS test_results (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         user_name       TEXT    NOT NULL,
@@ -18,20 +35,17 @@ function getDb(): Database.Database {
         question_count  INTEGER NOT NULL,
         correct_count   INTEGER NOT NULL,
         time_seconds    INTEGER NOT NULL,
-        completed_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+        completed_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+        ip_address      TEXT,
+        user_agent      TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_res_user_subj ON test_results(user_name, subject);
     `);
-    // Add extra columns if they don't exist yet (ALTER TABLE ignores errors)
-    for (const col of [
-      "ALTER TABLE test_results ADD COLUMN ip_address TEXT",
-      "ALTER TABLE test_results ADD COLUMN user_agent TEXT",
-    ]) {
-      try { _db.exec(col); } catch { /* column already exists */ }
-    }
   }
-  return _db;
+  return _resultsDb;
 }
+
+// ─── Question types ───────────────────────────────────────────────────────────
 
 type DbRow = {
   id: number;
@@ -99,7 +113,6 @@ export function getSections(subject = "bs"): string[] {
 
 // ─── Results & Leaderboard ───────────────────────────────────────────────────
 
-// Each row = one individual test result
 export type LeaderboardEntry = {
   id: number;
   user_name: string;
@@ -107,7 +120,7 @@ export type LeaderboardEntry = {
   correct_count: number;
   question_count: number;
   time_seconds: number;
-  completed_at: string; // "YYYY-MM-DD HH:MM:SS" UTC
+  completed_at: string;
 };
 
 export type UserStats = {
@@ -136,7 +149,7 @@ export function saveResultAndGetLeaderboard(params: {
   ipAddress?: string;
   userAgent?: string;
 }): SaveResultResponse {
-  const db = getDb();
+  const db = getResultsDb();
 
   const prevRow = db
     .prepare(
@@ -183,9 +196,8 @@ function getLeaderboardData(
   forUser: string,
   currentResultId: number,
 ): { leaderboard: LeaderboardEntry[]; currentResultRank: number; userStats: UserStats | null } {
-  const db = getDb();
+  const db = getResultsDb();
 
-  // All individual results for this subject, sorted best first
   const rows = db
     .prepare(
       `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at
@@ -206,13 +218,8 @@ function getLeaderboardData(
   });
 
   const all = rows.map(toEntry);
-
-  // Rank of the just-saved result in the overall list
   const currentResultRank = all.findIndex((e) => e.id === currentResultId) + 1;
 
-  const leaderboard = all;
-
-  // Personal stats aggregated for this user
   const userRows = all.filter((r) => r.user_name === forUser);
   let userStats: UserStats | null = null;
   if (userRows.length > 0) {
@@ -222,10 +229,10 @@ function getLeaderboardData(
     userStats = { totalGames: userRows.length, bestPct, avgPct, bestTime };
   }
 
-  return { leaderboard, currentResultRank, userStats };
+  return { leaderboard: all, currentResultRank, userStats };
 }
 
-// ─── Admin log access ────────────────────────────────────────────────────────
+// ─── Admin log access ─────────────────────────────────────────────────────────
 
 export type LogEntry = {
   id: number;
@@ -242,7 +249,7 @@ export type LogEntry = {
 };
 
 export function getAllLogs(): LogEntry[] {
-  const db = getDb();
+  const db = getResultsDb();
   const rows = db.prepare(`
     SELECT id, user_name, subject, section_filter,
            question_count, correct_count,

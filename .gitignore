@@ -6,6 +6,11 @@ node_modules/
 app/.next/
 app/out/
 
+# Results DB — lives on Railway volume, NEVER commit
+app/results.sqlite
+app/results.sqlite-wal
+app/results.sqlite-shm
+
 # SQLite WAL/journal files (auto-generated, never commit)
 *.sqlite-wal
 *.sqlite-shm
