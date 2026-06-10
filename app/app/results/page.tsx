@@ -211,7 +211,9 @@ export default function ResultsPage() {
             </h2>
 
             <div className="space-y-1.5">
-              {leaderboard.map((entry, i) => {
+              {leaderboard
+                .filter(e => e.user_name.trim() !== "" && !(e.pct === 100 && e.time_seconds < 15))
+                .map((entry, i) => {
                 const isCurrentResult = entry.id === currentResultId;
                 const isMyResult = entry.user_name === userName;
                 const rank = i + 1;

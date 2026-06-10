@@ -18,8 +18,15 @@ function fmtDate(raw: string) {
   });
 }
 
+function isVisible(l: { user_name: string; pct: number; time_seconds: number }) {
+  if (l.user_name.trim() === "") return false;
+  if (l.pct === 100 && l.time_seconds < 15) return false;
+  return true;
+}
+
 export default function AdminLogsPage() {
   const logs: LogEntry[] = getAllLogs();
+  const visibleLogs = logs.filter(isVisible);
 
   const totalTests  = logs.length;
   const uniqueUsers = new Set(logs.map(l => l.user_name)).size;
@@ -54,7 +61,7 @@ export default function AdminLogsPage() {
         </div>
 
         {/* Log table */}
-        {logs.length === 0 ? (
+        {visibleLogs.length === 0 ? (
           <div className="bg-gray-800 rounded-xl p-8 text-center text-gray-400">
             Nema zabilježenih testova.
           </div>
@@ -77,7 +84,7 @@ export default function AdminLogsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {logs.map((log, i) => {
+                  {visibleLogs.map((log, i) => {
                     const pctColor =
                       log.pct >= 90 ? "text-yellow-400" :
                       log.pct >= 75 ? "text-green-400" :
