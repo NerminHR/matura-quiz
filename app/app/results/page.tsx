@@ -212,7 +212,10 @@ export default function ResultsPage() {
 
             <div className="space-y-1.5">
               {leaderboard
-                .filter(e => e.user_name.trim() !== "" && !(e.pct === 100 && e.time_seconds < 15))
+                .filter(e => {
+                  const name = e.user_name.trim();
+                  return name !== "" && /[a-zA-ZšđžćčŠĐŽĆČ]/.test(name) && !(e.pct === 100 && e.time_seconds < 15);
+                })
                 .map((entry, i) => {
                 const isCurrentResult = entry.id === currentResultId;
                 const isMyResult = entry.user_name === userName;

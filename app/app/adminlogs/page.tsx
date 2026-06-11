@@ -19,7 +19,9 @@ function fmtDate(raw: string) {
 }
 
 function isVisible(l: { user_name: string; pct: number; time_seconds: number }) {
-  if (l.user_name.trim() === "") return false;
+  const name = l.user_name.trim();
+  if (name === "") return false;
+  if (!/[a-zA-ZšđžćčŠĐŽĆČ]/.test(name)) return false;
   if (l.pct === 100 && l.time_seconds < 15) return false;
   return true;
 }
