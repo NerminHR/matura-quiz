@@ -164,8 +164,8 @@ export default function FillInQuestion({ question: q, value, onChange, revealed 
     setDialogueAnswers(prev => ({ ...prev, [activeBlankNum]: value }));
   }, [value, activeBlankNum]);
 
-  // Grammar conjugation MCQ: fill_in with option_a/b/c/d, no context_text
-  if (!wordBank && !q.context_text && q.option_a) {
+  // Dropdown fill_in: option_a present (never has context_text/wordBank in current data)
+  if (!wordBank && q.option_a) {
     const options = [q.option_a!, q.option_b!, q.option_c!, q.option_d!].filter(Boolean);
     const correctWord = norm(q.correct_answer);
     return (

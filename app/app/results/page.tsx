@@ -22,7 +22,7 @@ const LETTERS = ["a", "b", "c", "d"] as const;
 function isAutoGradable(q: Question): boolean {
   if (q.question_type === "mcq" || q.question_type === "matching") return true;
   if (q.question_type === "fill_in") {
-    if (!q.context_text && q.option_a) return true; // grammar MCQ dropdown
+    if (q.option_a) return true; // dropdown fill_in (option_a present)
     if (q.context_text) {
       // Word-bank: at least one line is short, multi-space-separated, not a dialogue speaker line
       const lines = q.context_text.split("\n").map(l => l.trim()).filter(l => l.length > 0);

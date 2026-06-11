@@ -98,8 +98,8 @@ function QuizContent() {
       return Object.entries(q.correct_mapping).every(([k, v]) => (value as Record<string,string>)[k] === v);
     }
     if (q.question_type === "fill_in" && typeof value === "string" && value !== "") {
-      // Grammar conjugation MCQ: option_a set, no context_text → auto-grade by text match
-      if (!q.context_text && q.option_a) {
+      // Dropdown fill_in: option_a present → auto-grade by text match
+      if (q.option_a) {
         return value.trim().replace(/\s+/g, " ") === q.correct_answer.trim().replace(/\s+/g, " ");
       }
       const wb = parseWordBankFromCtx(q.context_text);
