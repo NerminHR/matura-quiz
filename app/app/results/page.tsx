@@ -280,7 +280,6 @@ export default function ResultsPage() {
                 <span className="flex-1">Ime</span>
                 <span className="w-12 text-right shrink-0">Rekord</span>
                 <span className="w-12 text-right shrink-0">Prosjek</span>
-                <span className="w-10 text-right shrink-0">Testovi</span>
                 <span className="w-10 text-right shrink-0 hidden sm:block">Vrijeme</span>
               </div>
 
@@ -303,9 +302,6 @@ export default function ResultsPage() {
                       </span>
                       <span className="text-gray-500 text-xs w-12 text-right shrink-0">
                         {entry.avgPct}%
-                      </span>
-                      <span className="text-gray-400 text-xs w-10 text-right shrink-0">
-                        {entry.testCount}×
                       </span>
                       <span className="text-gray-400 font-mono text-xs w-10 text-right shrink-0 hidden sm:block">
                         {fmt(entry.bestTime)}
