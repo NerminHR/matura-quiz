@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { containsProfanity } from "@/lib/profanity";
 
 type Subject = "bs" | "en";
 
@@ -157,17 +158,27 @@ export default function HomePage() {
               onKeyDown={(e) => e.key === "Enter" && saveName()}
               placeholder="Upišite ime..."
               maxLength={50}
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 transition-colors"
+              className={`w-full border-2 rounded-xl px-4 py-3 text-base focus:outline-none transition-colors ${
+                containsProfanity(nameInput)
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-200 focus:border-indigo-500"
+              }`}
               autoFocus
             />
-            <p className="text-xs text-gray-400 mt-1.5">
-              Slova, brojevi i razmaci · Letters, numbers and spaces
-            </p>
+            {containsProfanity(nameInput) ? (
+              <p className="text-xs text-red-500 mt-1.5 font-medium">
+                Ime nije dozvoljeno · Name not allowed
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1.5">
+                Slova, brojevi i razmaci · Letters, numbers and spaces
+              </p>
+            )}
           </div>
 
           <button
             onClick={saveName}
-            disabled={!nameInput.trim()}
+            disabled={!nameInput.trim() || containsProfanity(nameInput)}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-base rounded-xl transition-colors shadow-md"
           >
             Nastavi / Continue →

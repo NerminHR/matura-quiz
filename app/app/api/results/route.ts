@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveResultAndGetLeaderboard } from "@/lib/db";
+import { containsProfanity } from "@/lib/profanity";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const cleanName = userName.replace(/^seronja/i, "").trim() || userName.trim();
+    if (containsProfanity(cleanName)) {
+      return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+    }
     const result = saveResultAndGetLeaderboard({
       userName: cleanName.slice(0, 50),
       subject,
