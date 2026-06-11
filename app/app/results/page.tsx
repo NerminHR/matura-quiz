@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import type { Question, UserAnswer } from "@/types/question";
 import type { LeaderboardEntry, UserStats } from "@/lib/db";
 
+interface SavedResponse {
+  id: number;
+  isPersonalBest: boolean;
+  leaderboard: LeaderboardEntry[];
+  currentResultRank: number;
+  userStats: UserStats | null;
+}
+
 interface StoredResult {
   questions: Question[];
   userAnswers: UserAnswer[];
@@ -12,6 +20,7 @@ interface StoredResult {
   subject: string;
   sectionFilter: string | null;
   userName: string;
+  _savedResponse?: SavedResponse;
 }
 
 const LETTERS = ["a", "b", "c", "d"] as const;
@@ -68,6 +77,19 @@ export default function ResultsPage() {
     const parsed: StoredResult = JSON.parse(raw);
     setResult(parsed);
 
+    // If this result was already saved (e.g. user pressed Back after navigating away),
+    // reuse the cached API response instead of saving a duplicate.
+    if (parsed._savedResponse) {
+      const d = parsed._savedResponse;
+      setIsPersonalBest(d.isPersonalBest ?? false);
+      setLeaderboard(d.leaderboard ?? []);
+      setUserStats(d.userStats ?? null);
+      setCurrentResultRank(d.currentResultRank ?? 0);
+      setCurrentResultId(d.id ?? 0);
+      setSaving(false);
+      return;
+    }
+
     if (savedRef.current) return;
     savedRef.current = true;
 
@@ -90,7 +112,9 @@ export default function ResultsPage() {
       }),
     })
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: SavedResponse) => {
+        // Cache the response so remounts don't re-save
+        sessionStorage.setItem("quizResult", JSON.stringify({ ...parsed, _savedResponse: data }));
         setIsPersonalBest(data.isPersonalBest ?? false);
         setLeaderboard(data.leaderboard ?? []);
         setUserStats(data.userStats ?? null);
