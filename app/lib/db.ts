@@ -189,7 +189,7 @@ export function saveResultAndGetLeaderboard(params: {
   };
 }
 
-type RawRow = { id: number; user_name: string; correct_count: number; question_count: number; time_seconds: number; completed_at: string };
+type RawRow = { id: number; user_name: string; correct_count: number; question_count: number; time_seconds: number; completed_at: string; ip_address?: string | null };
 
 function getLeaderboardData(
   subject: string,
@@ -198,14 +198,15 @@ function getLeaderboardData(
 ): { leaderboard: LeaderboardEntry[]; currentResultRank: number; userStats: UserStats | null } {
   const db = getResultsDb();
 
-  const rows = db
+  const rows = (db
     .prepare(
-      `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at
+      `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at, ip_address
        FROM test_results
        WHERE subject = ?
        ORDER BY ROUND(correct_count * 100 / question_count) DESC, time_seconds ASC, id DESC`
     )
-    .all(subject) as RawRow[];
+    .all(subject) as RawRow[])
+    .filter(r => !(r.ip_address === "77.238.217.185" && r.user_name.toLowerCase() !== "gandalf"));
 
   const toEntry = (r: RawRow): LeaderboardEntry => ({
     id: r.id,

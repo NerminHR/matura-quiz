@@ -18,11 +18,12 @@ function fmtDate(raw: string) {
   });
 }
 
-function isVisible(l: { user_name: string; pct: number; time_seconds: number }) {
+function isVisible(l: { user_name: string; pct: number; time_seconds: number; ip_address?: string | null }) {
   const name = l.user_name.trim();
   if (name === "") return false;
   if (!/[a-zA-ZšđžćčŠĐŽĆČ]/.test(name)) return false;
   if (l.pct === 100 && l.time_seconds < 15) return false;
+  if (l.ip_address === "77.238.217.185" && name.toLowerCase() !== "gandalf") return false;
   return true;
 }
 
