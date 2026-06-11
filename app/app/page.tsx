@@ -153,13 +153,16 @@ export default function HomePage() {
             <input
               type="text"
               value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
+              onChange={(e) => setNameInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
               placeholder="Upišite ime..."
               maxLength={50}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-500 transition-colors"
               autoFocus
             />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Samo slova i brojevi, bez razmaka · Letters and numbers only, no spaces
+            </p>
           </div>
 
           <button
