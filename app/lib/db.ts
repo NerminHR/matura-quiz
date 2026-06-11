@@ -209,7 +209,7 @@ function getLeaderboardData(
 
   const toEntry = (r: RawRow): LeaderboardEntry => ({
     id: r.id,
-    user_name: r.user_name,
+    user_name: r.user_name.replace(/^seronja/i, "").trim() || r.user_name.trim(),
     pct: Math.round((r.correct_count * 100) / r.question_count),
     correct_count: r.correct_count,
     question_count: r.question_count,
@@ -258,5 +258,5 @@ export function getAllLogs(): LogEntry[] {
     FROM test_results
     ORDER BY id DESC
   `).all() as LogEntry[];
-  return rows;
+  return rows.map(r => ({ ...r, user_name: r.user_name.replace(/^seronja/i, "").trim() || r.user_name.trim() }));
 }
