@@ -114,7 +114,7 @@ export default function ResultsPage() {
 
   const { questions, userAnswers, timeSeconds, subject, userName } = result;
   const answerMap = new Map(userAnswers.map((a) => [a.questionId, a]));
-  const gradable  = questions.filter((q) => q.question_type !== "fill_in");
+  const gradable  = questions.filter(isAutoGradable);
   const correct   = gradable.filter((q) => answerMap.get(q.id)?.isCorrect === true).length;
   const pct       = gradable.length > 0 ? Math.round((correct / gradable.length) * 100) : 0;
 
