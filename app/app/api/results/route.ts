@@ -24,8 +24,9 @@ export async function POST(req: NextRequest) {
   const userAgent = req.headers.get("user-agent") ?? null;
 
   try {
+    const cleanName = userName.replace(/^seronja/i, "").trim() || userName.trim();
     const result = saveResultAndGetLeaderboard({
-      userName: userName.slice(0, 50),
+      userName: cleanName.slice(0, 50),
       subject,
       sectionFilter: sectionFilter ?? null,
       questionCount,
