@@ -58,6 +58,8 @@ export default function ResultsPage() {
   const [saving,             setSaving]             = useState(true);
   const [lbSort,             setLbSort]             = useState<"best" | "avg" | "count">("best");
   const [lbLimit,            setLbLimit]            = useState(10);
+  const [finalLbSort,        setFinalLbSort]        = useState<"best" | "avg">("best");
+  const [finalLbLimit,       setFinalLbLimit]       = useState(10);
   const [phase,              setPhase]              = useState<1 | 2>(1);
 
   useEffect(() => {
@@ -417,6 +419,114 @@ export default function ResultsPage() {
                   </div>
                   <p className="text-xs text-gray-400 text-center mt-3">
                     Najbolji rezultat po korisniku · {sorted.length} igrač{sorted.length === 1 ? "" : "a"} — ★ = ti
+                  </p>
+                </div>
+              );
+            })()}
+
+            {/* Final test leaderboard (200-question tests only) */}
+            {!saving && (() => {
+              const FINAL_THRESHOLD = 100;
+              const finalVisible = leaderboard.filter(e => {
+                const name = e.user_name.trim();
+                return name !== "" && /[a-zA-ZšđžćčŠĐŽĆČ]/.test(name) &&
+                  !(e.pct === 100 && e.time_seconds < 15) &&
+                  e.question_count >= FINAL_THRESHOLD;
+              });
+
+              if (finalVisible.length === 0) return (
+                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-2xl p-6 text-center">
+                  <div className="text-4xl mb-2">🏆</div>
+                  <h2 className="text-sm font-bold text-yellow-700 uppercase tracking-wide mb-1">
+                    Finalni test · Final Test
+                    <span className="text-xs font-normal normal-case ml-1">(200 pitanja)</span>
+                  </h2>
+                  <p className="text-xs text-yellow-500 mt-1">Još niko nije završio finalni test ovog predmeta. Budi prvi!</p>
+                </div>
+              );
+
+              const fUserMap = new Map<string, { bestPct: number; bestTime: number; totalPct: number; testCount: number }>();
+              for (const e of finalVisible) {
+                const u = fUserMap.get(e.user_name);
+                if (!u) {
+                  fUserMap.set(e.user_name, { bestPct: e.pct, bestTime: e.time_seconds, totalPct: e.pct, testCount: 1 });
+                } else {
+                  if (e.pct > u.bestPct) { u.bestPct = e.pct; u.bestTime = e.time_seconds; }
+                  else if (e.pct === u.bestPct && e.time_seconds < u.bestTime) { u.bestTime = e.time_seconds; }
+                  u.totalPct += e.pct;
+                  u.testCount++;
+                }
+              }
+              const fRows = Array.from(fUserMap.entries()).map(([user_name, u]) => ({
+                user_name, bestPct: u.bestPct, avgPct: Math.round(u.totalPct / u.testCount),
+                testCount: u.testCount, bestTime: u.bestTime,
+              }));
+              const fSorted = [...fRows].sort((a, b) =>
+                finalLbSort === "best"
+                  ? b.bestPct - a.bestPct || a.bestTime - b.bestTime
+                  : b.avgPct  - a.avgPct  || b.bestPct  - a.bestPct
+              );
+              const fDisplay = finalLbLimit === 0 ? fSorted : fSorted.slice(0, finalLbLimit);
+              const FINAL_SORT_OPTS = [["best", "Rekord"], ["avg", "Prosjek"]] as const;
+              const FINAL_LIMIT_OPTS = [10, 25, 50, 0] as const;
+              const FINAL_RANK = ["🏆", "🥇", "🥈"];
+
+              return (
+                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl shadow-sm p-5 border-2 border-yellow-300">
+                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+                    <h2 className="text-sm font-bold text-yellow-700 uppercase tracking-wide flex items-center gap-1.5">
+                      🏆 Finalni test · Final Test
+                      <span className="text-xs font-normal normal-case text-yellow-500">(200 pitanja)</span>
+                    </h2>
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <div className="flex gap-0.5 bg-yellow-100 rounded-lg p-0.5">
+                        {FINAL_SORT_OPTS.map(([key, label]) => (
+                          <button key={key} onClick={() => setFinalLbSort(key)}
+                            className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${finalLbSort === key ? "bg-yellow-400 shadow text-yellow-900" : "text-yellow-500 hover:text-yellow-700"}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-0.5 bg-yellow-100 rounded-lg p-0.5">
+                        {FINAL_LIMIT_OPTS.map((n) => (
+                          <button key={n} onClick={() => setFinalLbLimit(n)}
+                            className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${finalLbLimit === n ? "bg-yellow-400 shadow text-yellow-900" : "text-yellow-500 hover:text-yellow-700"}`}>
+                            {n === 0 ? "Sve" : n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 pb-1 text-xs text-yellow-500 font-medium border-b border-yellow-200 mb-1">
+                    <span className="w-6 shrink-0" />
+                    <span className="flex-1">Ime</span>
+                    <span className="w-12 text-right shrink-0">Rekord</span>
+                    <span className="w-12 text-right shrink-0">Prosjek</span>
+                    <span className="w-10 text-right shrink-0 hidden sm:block">Vrijeme</span>
+                  </div>
+                  <div className="space-y-1">
+                    {fDisplay.map((entry, i) => {
+                      const isMe = entry.user_name === userName;
+                      const rank = i + 1;
+                      const rankIcon = rank <= 3 ? FINAL_RANK[rank - 1] : `#${rank}`;
+                      return (
+                        <div key={entry.user_name}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${isMe ? "bg-yellow-200 border-2 border-yellow-400 font-semibold" : "bg-white/60"}`}>
+                          <span className="w-6 text-center shrink-0">{rankIcon}</span>
+                          <span className={`flex-1 truncate min-w-0 ${isMe ? "text-yellow-900" : "text-gray-700"}`}>
+                            {entry.user_name}{isMe ? " ★" : ""}
+                          </span>
+                          <span className={`font-black w-12 text-right shrink-0 ${entry.bestPct >= 90 ? "text-yellow-500" : entry.bestPct >= 75 ? "text-green-600" : entry.bestPct >= 55 ? "text-blue-600" : "text-gray-500"}`}>
+                            {entry.bestPct}%
+                          </span>
+                          <span className="text-gray-500 text-xs w-12 text-right shrink-0">{entry.avgPct}%</span>
+                          <span className="text-gray-400 font-mono text-xs w-10 text-right shrink-0 hidden sm:block">{fmt(entry.bestTime)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-yellow-400 text-center mt-3">
+                    Najbolji rezultat po korisniku · {fSorted.length} igrač{fSorted.length === 1 ? "" : "a"} — ★ = ti
                   </p>
                 </div>
               );
