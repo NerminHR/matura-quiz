@@ -153,7 +153,7 @@ export default function HomePage() {
             <input
               type="text"
               value={nameInput}
-              onChange={(e) => setNameInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+              onChange={(e) => setNameInput(e.target.value.replace(/[^a-zA-Z0-9 ]/g, ""))}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
               placeholder="Upišite ime..."
               maxLength={50}
@@ -161,7 +161,7 @@ export default function HomePage() {
               autoFocus
             />
             <p className="text-xs text-gray-400 mt-1.5">
-              Samo slova i brojevi, bez razmaka · Letters and numbers only, no spaces
+              Slova, brojevi i razmaci · Letters, numbers and spaces
             </p>
           </div>
 
