@@ -359,7 +359,7 @@ export default function ResultsPage() {
                 return b.testCount - a.testCount || b.bestPct - a.bestPct;
               });
               const rows = lbLimit === 0 ? sorted : sorted.slice(0, lbLimit);
-              const SORT_OPTS = [["best","Rekord"],["avg","Prosjek"],["count","Testovi"]] as const;
+              const SORT_OPTS = [["best","Rekord"],["avg","Prosjek"]] as const;
               const LIMIT_OPTS = [10, 25, 50, 0] as const;
               return (
                 <div className="bg-white rounded-2xl shadow-sm p-5">
