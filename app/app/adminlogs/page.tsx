@@ -18,18 +18,8 @@ function fmtDate(raw: string) {
   });
 }
 
-function isVisible(l: { user_name: string; pct: number; time_seconds: number; ip_address?: string | null }) {
-  const name = l.user_name.trim();
-  if (name === "") return false;
-  if (!/[a-zA-ZšđžćčŠĐŽĆČ]/.test(name)) return false;
-  if (l.pct === 100 && l.time_seconds < 15) return false;
-  if (l.ip_address === "77.238.217.185" && name.toLowerCase() !== "gandalf") return false;
-  return true;
-}
-
 export default function AdminLogsPage() {
   const logs: LogEntry[] = getAllLogs();
-  const visibleLogs = logs.filter(isVisible);
 
   const totalTests  = logs.length;
   const uniqueUsers = new Set(logs.map(l => l.user_name)).size;
@@ -64,7 +54,7 @@ export default function AdminLogsPage() {
         </div>
 
         {/* Log table */}
-        {visibleLogs.length === 0 ? (
+        {logs.length === 0 ? (
           <div className="bg-gray-800 rounded-xl p-8 text-center text-gray-400">
             Nema zabilježenih testova.
           </div>
@@ -87,7 +77,7 @@ export default function AdminLogsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {visibleLogs.map((log, i) => {
+                  {logs.map((log, i) => {
                     const pctColor =
                       log.pct >= 90 ? "text-yellow-400" :
                       log.pct >= 75 ? "text-green-400" :
