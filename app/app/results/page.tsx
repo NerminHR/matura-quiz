@@ -56,6 +56,8 @@ export default function ResultsPage() {
   const [currentResultRank,  setCurrentResultRank]  = useState(0);
   const [currentResultId,    setCurrentResultId]    = useState(0);
   const [saving,             setSaving]             = useState(true);
+  const [lbSort,             setLbSort]             = useState<"best" | "avg" | "count">("best");
+  const [lbLimit,            setLbLimit]            = useState(10);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("quizResult");
@@ -204,68 +206,121 @@ export default function ResultsPage() {
         )}
 
         {/* ── Leaderboard ── */}
-        {!saving && leaderboard.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
-              🏅 Rang lista · Leaderboard — {SUBJECT_LABEL[subject] ?? subject}
-            </h2>
+        {!saving && leaderboard.length > 0 && (() => {
+          // Filter
+          const visible = leaderboard.filter(e => {
+            const name = e.user_name.trim();
+            return name !== "" && /[a-zA-ZšđžćčŠĐŽĆČ]/.test(name) && !(e.pct === 100 && e.time_seconds < 15);
+          });
 
-            <div className="space-y-1.5">
-              {leaderboard
-                .filter(e => {
-                  const name = e.user_name.trim();
-                  return name !== "" && /[a-zA-ZšđžćčŠĐŽĆČ]/.test(name) && !(e.pct === 100 && e.time_seconds < 15);
-                })
-                .map((entry, i) => {
-                const isCurrentResult = entry.id === currentResultId;
-                const isMyResult = entry.user_name === userName;
-                const rank = i + 1;
-                const dt = entry.completed_at
-                  ? (() => {
-                      const d = new Date(entry.completed_at.replace(" ", "T") + "Z");
-                      return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-                    })()
-                  : "";
-                return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
-                      isCurrentResult
-                        ? "bg-yellow-50 border-2 border-yellow-300 font-semibold"
-                        : isMyResult
-                        ? "bg-blue-50 border border-blue-200"
-                        : "bg-gray-50"
-                    }`}
-                  >
-                    <span className="w-6 text-center font-bold text-gray-400 shrink-0">
-                      {rank <= 3 ? RANK_MEDAL[rank - 1] : `#${rank}`}
-                    </span>
-                    <span className={`flex-1 truncate min-w-0 ${isCurrentResult ? "text-yellow-800" : isMyResult ? "text-blue-800" : "text-gray-700"}`}>
-                      {entry.user_name}{isCurrentResult ? " ★" : ""}
-                    </span>
-                    <span className={`font-black w-10 text-right shrink-0 ${
-                      entry.pct >= 90 ? "text-yellow-500" :
-                      entry.pct >= 75 ? "text-green-600" :
-                      entry.pct >= 55 ? "text-blue-600" : "text-gray-500"
-                    }`}>
-                      {entry.pct}%
-                    </span>
-                    <span className="text-gray-400 font-mono text-xs w-10 text-right shrink-0">
-                      {fmt(entry.time_seconds)}
-                    </span>
-                    <span className="text-gray-400 text-xs w-20 text-right shrink-0 hidden sm:block">
-                      {dt}
-                    </span>
+          // Group by user
+          const userMap = new Map<string, { bestPct: number; bestTime: number; totalPct: number; testCount: number }>();
+          for (const e of visible) {
+            const u = userMap.get(e.user_name);
+            if (!u) {
+              userMap.set(e.user_name, { bestPct: e.pct, bestTime: e.time_seconds, totalPct: e.pct, testCount: 1 });
+            } else {
+              if (e.pct > u.bestPct) { u.bestPct = e.pct; u.bestTime = e.time_seconds; }
+              else if (e.pct === u.bestPct && e.time_seconds < u.bestTime) { u.bestTime = e.time_seconds; }
+              u.totalPct += e.pct;
+              u.testCount++;
+            }
+          }
+          const userRows = Array.from(userMap.entries()).map(([user_name, u]) => ({
+            user_name,
+            bestPct: u.bestPct,
+            avgPct:  Math.round(u.totalPct / u.testCount),
+            testCount: u.testCount,
+            bestTime: u.bestTime,
+          }));
+
+          // Sort
+          const sorted = [...userRows].sort((a, b) => {
+            if (lbSort === "best")  return b.bestPct  - a.bestPct  || a.bestTime - b.bestTime;
+            if (lbSort === "avg")   return b.avgPct   - a.avgPct   || b.bestPct  - a.bestPct;
+            return b.testCount - a.testCount || b.bestPct - a.bestPct;
+          });
+
+          // Limit (0 = all)
+          const rows = lbLimit === 0 ? sorted : sorted.slice(0, lbLimit);
+
+          const SORT_OPTS = [["best","Rekord"],["avg","Prosjek"],["count","Testovi"]] as const;
+          const LIMIT_OPTS = [10, 25, 50, 0] as const;
+
+          return (
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              {/* Header + controls */}
+              <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                  🏅 Rang lista · {SUBJECT_LABEL[subject] ?? subject}
+                </h2>
+                <div className="flex gap-1.5 flex-wrap items-center">
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {SORT_OPTS.map(([key, label]) => (
+                      <button key={key} onClick={() => setLbSort(key)}
+                        className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${lbSort === key ? "bg-white shadow text-gray-800" : "text-gray-400 hover:text-gray-600"}`}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {LIMIT_OPTS.map((n) => (
+                      <button key={n} onClick={() => setLbLimit(n)}
+                        className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${lbLimit === n ? "bg-white shadow text-gray-800" : "text-gray-400 hover:text-gray-600"}`}>
+                        {n === 0 ? "Sve" : n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-            <p className="text-xs text-gray-400 text-center mt-3">
-              Svaki test · Sorted by accuracy — ★ = ovaj test
-            </p>
-          </div>
-        )}
+              {/* Column headers */}
+              <div className="flex items-center gap-2 px-3 pb-1 text-xs text-gray-400 font-medium border-b border-gray-100 mb-1">
+                <span className="w-6 shrink-0" />
+                <span className="flex-1">Ime</span>
+                <span className="w-12 text-right shrink-0">Rekord</span>
+                <span className="w-12 text-right shrink-0">Prosjek</span>
+                <span className="w-10 text-right shrink-0">Testovi</span>
+                <span className="w-10 text-right shrink-0 hidden sm:block">Vrijeme</span>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-1">
+                {rows.map((entry, i) => {
+                  const isMe = entry.user_name === userName;
+                  const rank = i + 1;
+                  return (
+                    <div key={entry.user_name}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${isMe ? "bg-yellow-50 border-2 border-yellow-300 font-semibold" : "bg-gray-50"}`}>
+                      <span className="w-6 text-center font-bold text-gray-400 shrink-0">
+                        {rank <= 3 ? RANK_MEDAL[rank - 1] : `#${rank}`}
+                      </span>
+                      <span className={`flex-1 truncate min-w-0 ${isMe ? "text-yellow-800" : "text-gray-700"}`}>
+                        {entry.user_name}{isMe ? " ★" : ""}
+                      </span>
+                      <span className={`font-black w-12 text-right shrink-0 ${entry.bestPct >= 90 ? "text-yellow-500" : entry.bestPct >= 75 ? "text-green-600" : entry.bestPct >= 55 ? "text-blue-600" : "text-gray-500"}`}>
+                        {entry.bestPct}%
+                      </span>
+                      <span className="text-gray-500 text-xs w-12 text-right shrink-0">
+                        {entry.avgPct}%
+                      </span>
+                      <span className="text-gray-400 text-xs w-10 text-right shrink-0">
+                        {entry.testCount}×
+                      </span>
+                      <span className="text-gray-400 font-mono text-xs w-10 text-right shrink-0 hidden sm:block">
+                        {fmt(entry.bestTime)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-gray-400 text-center mt-3">
+                Najbolji rezultat po korisniku · {sorted.length} igrač{sorted.length === 1 ? "" : "a"} — ★ = ti
+              </p>
+            </div>
+          );
+        })()}
 
         {saving && (
           <div className="bg-white rounded-2xl shadow-sm p-5 text-center text-sm text-gray-400">
