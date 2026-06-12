@@ -371,8 +371,8 @@ export default function ResultsPage() {
                 const name = e.user_name.trim();
                 if (!name || !/[a-zA-ZšđžćčŠĐŽĆČ]/.test(name)) return false;
                 if (e.pct === 100 && e.time_seconds < 15) return false;
-                // Section filter: null = sve oblasti (show all), string = exact match
-                if (lbSection !== null && e.section_filter !== lbSection) return false;
+                // Section filter: exact match — null matches null (Sve oblasti tests only)
+                if (e.section_filter !== lbSection) return false;
                 return true;
               });
               const userMap = new Map<string, { bestPct: number; bestTime: number; totalPct: number; testCount: number }>();
