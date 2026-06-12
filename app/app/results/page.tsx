@@ -100,6 +100,16 @@ export default function ResultsPage() {
       return ua?.isCorrect === true;
     }).length;
 
+    // Per-question stats: only gradable questions that were actually answered
+    const answers = gradable
+      .map((q) => {
+        const ua = parsed.userAnswers.find((a) => a.questionId === q.id);
+        return ua && ua.isCorrect !== null
+          ? { questionId: q.id, isCorrect: ua.isCorrect === true }
+          : null;
+      })
+      .filter((a): a is { questionId: number; isCorrect: boolean } => a !== null);
+
     fetch("/api/results", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,6 +120,7 @@ export default function ResultsPage() {
         questionCount: gradable.length,
         correctCount:  correct,
         timeSeconds:   parsed.timeSeconds ?? 0,
+        answers,
       }),
     })
       .then((r) => r.json())

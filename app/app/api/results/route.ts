@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userName, subject, sectionFilter, questionCount, correctCount, timeSeconds } = body;
+  const { userName, subject, sectionFilter, questionCount, correctCount, timeSeconds, answers } = body;
 
   if (
     !userName || typeof userName !== "string" ||
@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
     if (containsProfanity(cleanName)) {
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
+    // Sanitize per-question answers (optional)
+    const cleanAnswers = Array.isArray(answers)
+      ? answers
+          .filter((a) => a && typeof a.questionId === "number" && typeof a.isCorrect === "boolean")
+          .map((a) => ({ questionId: a.questionId, isCorrect: a.isCorrect }))
+      : undefined;
+
     const result = saveResultAndGetLeaderboard({
       userName: cleanName.slice(0, 50),
       subject,
@@ -38,6 +45,7 @@ export async function POST(req: NextRequest) {
       timeSeconds: Math.max(0, Math.min(timeSeconds, 7200)),
       ipAddress: ip,
       userAgent: userAgent ?? undefined,
+      answers: cleanAnswers,
     });
     return NextResponse.json(result);
   } catch (err) {

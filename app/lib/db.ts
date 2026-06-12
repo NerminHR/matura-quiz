@@ -40,6 +40,14 @@ function getResultsDb(): Database.Database {
         user_agent      TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_res_user_subj ON test_results(user_name, subject);
+
+      CREATE TABLE IF NOT EXISTS question_stats (
+        question_id   INTEGER NOT NULL,
+        subject       TEXT    NOT NULL,
+        answered_count INTEGER NOT NULL DEFAULT 0,
+        correct_count  INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (question_id)
+      );
     `);
   }
   return _resultsDb;
@@ -149,6 +157,7 @@ export function saveResultAndGetLeaderboard(params: {
   timeSeconds: number;
   ipAddress?: string;
   userAgent?: string;
+  answers?: { questionId: number; isCorrect: boolean }[];
 }): SaveResultResponse {
   const db = getResultsDb();
 
@@ -176,6 +185,21 @@ export function saveResultAndGetLeaderboard(params: {
       params.ipAddress ?? null,
       params.userAgent ?? null,
     );
+
+  // Per-question statistics — upsert each answered gradable question
+  if (params.answers && params.answers.length > 0) {
+    const upsert = db.prepare(
+      `INSERT INTO question_stats (question_id, subject, answered_count, correct_count)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(question_id) DO UPDATE SET
+         answered_count = answered_count + 1,
+         correct_count  = correct_count + excluded.correct_count`
+    );
+    const tx = db.transaction((rows: { questionId: number; isCorrect: boolean }[]) => {
+      for (const a of rows) upsert.run(a.questionId, params.subject, a.isCorrect ? 1 : 0);
+    });
+    tx(params.answers);
+  }
 
   const newId = ins.lastInsertRowid as number;
   const { leaderboard, currentResultRank, userStats } = getLeaderboardData(params.subject, params.userName, newId);
@@ -262,4 +286,59 @@ export function getAllLogs(): LogEntry[] {
     ORDER BY id DESC
   `).all() as LogEntry[];
   return rows.map(r => ({ ...r, user_name: r.user_name.replace(/^seronja/i, "").trim() || r.user_name.trim() }));
+}
+
+// ─── Per-question statistics ────────────────────────────────────────────────
+
+export type QuestionStat = {
+  question_id: number;
+  subject: string;
+  section: string;
+  question_number: number;
+  question_type: string;
+  question_text: string;
+  correct_answer: string;
+  answered_count: number;
+  correct_count: number;
+  wrong_count: number;
+  wrong_pct: number;
+};
+
+export function getQuestionStats(): QuestionStat[] {
+  const stats = getResultsDb()
+    .prepare(`SELECT question_id, subject, answered_count, correct_count FROM question_stats WHERE answered_count > 0`)
+    .all() as { question_id: number; subject: string; answered_count: number; correct_count: number }[];
+
+  if (stats.length === 0) return [];
+
+  // Pull question details from the questions DB and merge by id
+  const qdb = getDb();
+  const detailStmt = qdb.prepare(`
+    SELECT q.id, s.name AS section, q.question_number, q.question_type, q.question_text, q.correct_answer
+    FROM questions q JOIN sections s ON s.id = q.section_id
+    WHERE q.id = ?
+  `);
+
+  const merged: QuestionStat[] = stats.map((st) => {
+    const d = detailStmt.get(st.question_id) as
+      | { section: string; question_number: number; question_type: string; question_text: string; correct_answer: string }
+      | undefined;
+    const wrong = st.answered_count - st.correct_count;
+    return {
+      question_id: st.question_id,
+      subject: st.subject,
+      section: d?.section ?? "—",
+      question_number: d?.question_number ?? 0,
+      question_type: d?.question_type ?? "—",
+      question_text: d?.question_text ?? "(nepoznato pitanje)",
+      correct_answer: d?.correct_answer ?? "—",
+      answered_count: st.answered_count,
+      correct_count: st.correct_count,
+      wrong_count: wrong,
+      wrong_pct: Math.round((wrong / st.answered_count) * 100),
+    };
+  });
+
+  // Highest wrong-rate first; tie-break by sample size
+  return merged.sort((a, b) => b.wrong_pct - a.wrong_pct || b.answered_count - a.answered_count);
 }
