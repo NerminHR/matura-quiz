@@ -67,6 +67,7 @@ export default function ResultsPage() {
   const [saving,             setSaving]             = useState(true);
   const [lbSort,             setLbSort]             = useState<"best" | "avg" | "count">("best");
   const [lbLimit,            setLbLimit]            = useState(10);
+  const [lbSection,          setLbSection]          = useState<string | null>(null);
   const [finalLbSort,        setFinalLbSort]        = useState<"best" | "avg">("best");
   const [finalLbLimit,       setFinalLbLimit]       = useState(10);
   const [phase,              setPhase]              = useState<1 | 2>(1);
@@ -359,9 +360,20 @@ export default function ResultsPage() {
 
             {/* Leaderboard */}
             {!saving && leaderboard.length > 0 && (() => {
+              // Derive available single-section options from the data
+              const sectionOptions = [...new Set(
+                leaderboard
+                  .map(e => e.section_filter)
+                  .filter((s): s is string => s !== null && !s.includes(","))
+              )].sort();
+
               const visible = leaderboard.filter(e => {
                 const name = e.user_name.trim();
-                return name !== "" && /[a-zA-ZšđžćčŠĐŽĆČ]/.test(name) && !(e.pct === 100 && e.time_seconds < 15);
+                if (!name || !/[a-zA-ZšđžćčŠĐŽĆČ]/.test(name)) return false;
+                if (e.pct === 100 && e.time_seconds < 15) return false;
+                // Section filter: null = sve oblasti (show all), string = exact match
+                if (lbSection !== null && e.section_filter !== lbSection) return false;
+                return true;
               });
               const userMap = new Map<string, { bestPct: number; bestTime: number; totalPct: number; testCount: number }>();
               for (const e of visible) {
@@ -394,6 +406,18 @@ export default function ResultsPage() {
                       🏅 Rang lista · {SUBJECT_LABEL[subject] ?? subject}
                     </h2>
                     <div className="flex gap-1.5 flex-wrap items-center">
+                      {sectionOptions.length > 0 && (
+                        <select
+                          value={lbSection ?? ""}
+                          onChange={e => setLbSection(e.target.value || null)}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">Sve oblasti</option>
+                          {sectionOptions.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      )}
                       <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
                         {SORT_OPTS.map(([key, label]) => (
                           <button key={key} onClick={() => setLbSort(key)}

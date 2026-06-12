@@ -121,6 +121,7 @@ export type LeaderboardEntry = {
   question_count: number;
   time_seconds: number;
   completed_at: string;
+  section_filter: string | null;
 };
 
 export type UserStats = {
@@ -189,7 +190,7 @@ export function saveResultAndGetLeaderboard(params: {
   };
 }
 
-type RawRow = { id: number; user_name: string; correct_count: number; question_count: number; time_seconds: number; completed_at: string; ip_address?: string | null };
+type RawRow = { id: number; user_name: string; correct_count: number; question_count: number; time_seconds: number; completed_at: string; ip_address?: string | null; section_filter: string | null };
 
 function getLeaderboardData(
   subject: string,
@@ -200,7 +201,7 @@ function getLeaderboardData(
 
   const rows = (db
     .prepare(
-      `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at, ip_address
+      `SELECT id, user_name, correct_count, question_count, time_seconds, completed_at, ip_address, section_filter
        FROM test_results
        WHERE subject = ?
        ORDER BY ROUND(correct_count * 100 / question_count) DESC, time_seconds ASC, id DESC`
@@ -216,6 +217,7 @@ function getLeaderboardData(
     question_count: r.question_count,
     time_seconds: r.time_seconds,
     completed_at: r.completed_at,
+    section_filter: r.section_filter,
   });
 
   const all = rows.map(toEntry);
