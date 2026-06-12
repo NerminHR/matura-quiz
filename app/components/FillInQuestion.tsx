@@ -27,7 +27,7 @@ function parseCtx(ctx: string | null): { wordBank: string[] | null; dialogue: st
   return { wordBank: null, dialogue: null };
 }
 
-const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+const norm = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
 
 function getCorrectWord(correctAnswer: string, questionNumber: number): string {
   if (correctAnswer.includes("|") && correctAnswer.includes(":")) {

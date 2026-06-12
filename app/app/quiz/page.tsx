@@ -78,7 +78,7 @@ function QuizContent() {
   }
 
   function getWBCorrectWord(correctAnswer: string, questionNumber: number): string {
-    const n = (s: string) => s.trim().replace(/\s+/g, " ");
+    const n = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
     if (correctAnswer.includes("|") && correctAnswer.includes(":")) {
       const activeBlank = questionNumber % 10 || 1;
       for (const part of correctAnswer.split("|")) {
@@ -99,13 +99,14 @@ function QuizContent() {
     }
     if (q.question_type === "fill_in" && typeof value === "string" && value !== "") {
       // Dropdown fill_in: option_a present → auto-grade by text match
+      const nq = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
       if (q.option_a) {
-        return value.trim().replace(/\s+/g, " ") === q.correct_answer.trim().replace(/\s+/g, " ");
+        return nq(value) === nq(q.correct_answer);
       }
       const wb = parseWordBankFromCtx(q.context_text);
       if (wb) {
         const correct = getWBCorrectWord(q.correct_answer, q.question_number);
-        return value.trim().replace(/\s+/g, " ") === correct;
+        return nq(value) === correct;
       }
     }
     return null;
