@@ -27,7 +27,11 @@ function parseCtx(ctx: string | null): { wordBank: string[] | null; dialogue: st
   return { wordBank: null, dialogue: null };
 }
 
-const norm = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
+// Normalize curly/typographic apostrophes & quotes to ASCII so word-bank
+// selections (which carry U+2019 from the PDF) match the answer key (U+0027).
+// Char class covers: ‘ ’ ʼ ׳ ′ (single) and “ ” (double).
+const norm = (s: string) =>
+  s.trim().replace(/\s+/g, " ").replace(/[‘’ʼ׳′]/g, "'").replace(/[“”]/g, '"');
 
 function getCorrectWord(correctAnswer: string, questionNumber: number): string {
   if (correctAnswer.includes("|") && correctAnswer.includes(":")) {

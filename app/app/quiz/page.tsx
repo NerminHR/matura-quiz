@@ -14,6 +14,12 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Normalize curly/typographic apostrophes & quotes to ASCII so word-bank
+// selections (which carry U+2019 from the PDF) match the answer key (U+0027).
+// Char class covers: ‘ ’ ʼ ׳ ′ (single) and “ ” (double).
+const normText = (s: string) =>
+  s.trim().replace(/\s+/g, " ").replace(/[‘’ʼ׳′]/g, "'").replace(/[“”]/g, '"');
+
 function QuizContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -78,15 +84,14 @@ function QuizContent() {
   }
 
   function getWBCorrectWord(correctAnswer: string, questionNumber: number): string {
-    const n = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
     if (correctAnswer.includes("|") && correctAnswer.includes(":")) {
       const activeBlank = questionNumber % 10 || 1;
       for (const part of correctAnswer.split("|")) {
         const m = part.trim().match(/^(\d+):\s*(.+)$/);
-        if (m && parseInt(m[1]) === activeBlank) return n(m[2]);
+        if (m && parseInt(m[1]) === activeBlank) return normText(m[2]);
       }
     }
-    return n(correctAnswer);
+    return normText(correctAnswer);
   }
 
   function computeCorrect(q: Question, value: string | Record<string, string>): boolean | null {
@@ -99,14 +104,13 @@ function QuizContent() {
     }
     if (q.question_type === "fill_in" && typeof value === "string" && value !== "") {
       // Dropdown fill_in: option_a present → auto-grade by text match
-      const nq = (s: string) => s.trim().replace(/\s+/g, " ").replace(/['']/g, "'").replace(/[""]/g, '"');
       if (q.option_a) {
-        return nq(value) === nq(q.correct_answer);
+        return normText(value) === normText(q.correct_answer);
       }
       const wb = parseWordBankFromCtx(q.context_text);
       if (wb) {
         const correct = getWBCorrectWord(q.correct_answer, q.question_number);
-        return nq(value) === correct;
+        return normText(value) === correct;
       }
     }
     return null;
